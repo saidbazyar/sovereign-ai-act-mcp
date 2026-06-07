@@ -1,16 +1,39 @@
 {
   "name": "sovereign-ai-act-mcp",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server exposing Leo — the deterministic EU AI Act (Regulation (EU) 2024/1689) classifier — as tools for AI agents. Every answer cites the law verbatim.",
   "type": "module",
-  "bin": { "sovereign-ai-act-mcp": "index.js" },
+  "bin": {
+    "sovereign-ai-act-mcp": "index.js"
+  },
   "main": "index.js",
-  "engines": { "node": ">=18" },
-  "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0" },
-  "repository": { "type": "git", "url": "git+https://github.com/saidbazyar/sovereign-ai-act-mcp.git" },
-  "bugs": { "url": "https://github.com/saidbazyar/sovereign-ai-act-mcp/issues" },
-  "keywords": ["mcp", "model-context-protocol", "eu-ai-act", "ai-act", "compliance", "regulation", "europe", "gdpr", "claude", "llm"],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saidbazyar/sovereign-ai-act-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/saidbazyar/sovereign-ai-act-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "eu-ai-act",
+    "ai-act",
+    "compliance",
+    "regulation",
+    "europe",
+    "gdpr",
+    "claude",
+    "llm"
+  ],
   "homepage": "https://www.regulatoryai.eu/for-ai/",
   "license": "MIT",
-  "author": "Dominion Intelligence AB"
+  "author": "Dominion Intelligence AB",
+  "mcpName": "eu.regulatoryai/sovereign-ai-act-mcp"
 }

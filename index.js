@@ -18,7 +18,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 const BASE = process.env.SOVEREIGN_API_BASE || "https://www.regulatoryai.eu";
-const UA = "sovereign-ai-act-mcp/1.1.0 (+https://www.regulatoryai.eu/for-ai/)";
+const UA = "sovereign-ai-act-mcp/1.1.1 (+https://www.regulatoryai.eu/for-ai/)";
 
 // Canonical post-Digital-Omnibus (7 May 2026) EU AI Act application dates.
 const DEADLINES = {
@@ -96,7 +96,7 @@ async function call(path, opts = {}) {
   } finally { clearTimeout(t); }
 }
 
-const server = new Server({ name: "sovereign-ai-act", version: "1.1.0" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "sovereign-ai-act", version: "1.1.1" }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -123,4 +123,4 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error("Sovereign AI Act MCP server v1.1.0 running (stdio) · " + BASE);
+console.error("Sovereign AI Act MCP server v1.1.1 running (stdio) · " + BASE);
