@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.saidbazyar/sovereign-ai-act-mcp",
+  "description": "Classify any AI system under the EU AI Act (Regulation (EU) 2024/1689): risk tier and binding Articles, grounded verbatim in the law. Tools: classify_ai_system, lookup_article, search_eu_ai_act.",
+  "status": "active",
+  "repository": { "url": "https://github.com/saidbazyar/sovereign-ai-act-mcp", "source": "github" },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "sovereign-ai-act-mcp",
+      "version": "1.0.0",
+      "transport": { "type": "stdio" }
+    }
+  ]
+}
