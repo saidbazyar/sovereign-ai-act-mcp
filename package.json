@@ -35,5 +35,8 @@
   "homepage": "https://www.regulatoryai.eu/for-ai/",
   "license": "MIT",
   "author": "Dominion Intelligence AB",
-  "mcpName": "eu.regulatoryai/sovereign-ai-act-mcp"
+  "mcpName": "eu.regulatoryai/sovereign-ai-act-mcp",
+  "scripts": {
+    "test": "node test/smoke.mjs"
+  }
 }
