@@ -2,9 +2,10 @@
 FROM node:20-slim
 WORKDIR /app
 
-# Install dependencies first (better layer caching)
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev --no-audit --no-fund
+# Install dependencies first (better layer caching).
+# npm ci = clean, reproducible install pinned to package-lock.json (deterministic, audited builds).
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
 
 # App source
 COPY . .
