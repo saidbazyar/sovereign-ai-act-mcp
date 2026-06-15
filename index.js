@@ -17,8 +17,18 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
+const VERSION = "1.3.0";
 const BASE = process.env.SOVEREIGN_API_BASE || "https://www.regulatoryai.eu";
-const UA = "sovereign-ai-act-mcp/1.1.1 (+https://www.regulatoryai.eu/for-ai/)";
+const UA = `sovereign-ai-act-mcp/${VERSION} (+https://www.regulatoryai.eu/for-ai/)`;
+
+// The 24 official EU languages the EU AI Act corpus is published in (ISO 639-1).
+const LANGS = ["bg","cs","da","de","el","en","es","et","fi","fr","ga","hr","hu","it","lt","lv","mt","nl","pl","pt","ro","sk","sl","sv"];
+const langSchema = {
+  type: "string",
+  enum: LANGS,
+  default: "en",
+  description: "Language for the answer, as an ISO 639-1 code — one of the EU AI Act's 24 official languages (e.g. 'en' English, 'de' German, 'fr' French, 'es' Spanish, 'sv' Swedish). Defaults to 'en'.",
+};
 
 // Canonical post-Digital-Omnibus (7 May 2026) EU AI Act application dates.
 const DEADLINES = {
@@ -39,48 +49,101 @@ const TOOLS = [
   {
     name: "classify_ai_system",
     description:
-      "Classify an AI system under the EU AI Act (Regulation (EU) 2024/1689). Returns the risk tier " +
-      "(prohibited / high_risk / limited / minimal), the exact Annex III category and the binding Articles, " +
-      "grounded verbatim in the law. Use whenever a user asks whether an AI system is high-risk, prohibited, " +
-      "what obligations apply, or which Articles bind a given AI use-case.",
+      "Classify an AI system under the EU AI Act (Regulation (EU) 2024/1689). Give a plain-language description of " +
+      "what the system does and it returns the risk tier (prohibited / high_risk / limited / minimal), the exact " +
+      "Annex III category where applicable, and the binding Articles — every reference grounded verbatim in the law. " +
+      "USE THIS when the user asks whether an AI system is high-risk or prohibited, what obligations apply to it, or " +
+      "which Articles bind a specific AI use-case. For looking up one known Article use lookup_article; for keyword " +
+      "search use search_eu_ai_act.",
+    annotations: { title: "Classify an AI system (EU AI Act risk tier)", readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
-        description: { type: "string", description: "Plain-language description of the AI system and what it does." },
-        language: { type: "string", description: "ISO 639-1 code (en, de, fr, es, it, sv, …). Default en.", default: "en" },
-        full: { type: "boolean", description: "Include the verbatim cited Article/Annex text. Default false.", default: false },
+        description: {
+          type: "string",
+          minLength: 4,
+          description: "Plain-language description of the AI system: what it does, who it affects, and the context of use. The more specific, the more precise the classification.",
+          examples: [
+            "An AI that screens and ranks job applicants' CVs for a recruiter",
+            "A chatbot that answers customer questions on an e-commerce website",
+            "Real-time facial recognition used by police in public spaces",
+            "A credit-scoring model that decides who gets a consumer loan",
+          ],
+        },
+        language: langSchema,
+        full: {
+          type: "boolean",
+          default: false,
+          description: "When true, include the verbatim cited Article/Annex text in the response (longer). When false (default), return the classification and references only.",
+        },
       },
       required: ["description"],
+      additionalProperties: false,
     },
   },
   {
     name: "lookup_article",
-    description: "Return the verbatim text of a specific EU AI Act Article (1–113), as published by the EU.",
+    description:
+      "Return the verbatim text of one specific EU AI Act Article (1–113), exactly as published in the Official " +
+      "Journal of the EU. USE THIS when the user names or asks for a known Article number (e.g. 'show me Article 6', " +
+      "'what does Article 5 say'). For keyword/topic search across the whole law use search_eu_ai_act; to classify a " +
+      "system use classify_ai_system.",
+    annotations: { title: "Look up an EU AI Act Article (verbatim)", readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
-        number: { type: "integer", description: "Article number, 1–113." },
-        language: { type: "string", description: "ISO 639-1 code. Default en.", default: "en" },
+        number: {
+          type: "integer",
+          minimum: 1,
+          maximum: 113,
+          description: "The Article number to retrieve, an integer from 1 to 113. Examples: 5 (prohibited practices), 6 (high-risk classification), 9 (risk management), 14 (human oversight), 50 (transparency), 99 (penalties).",
+          examples: [5, 6, 14, 50, 99],
+        },
+        language: langSchema,
       },
       required: ["number"],
+      additionalProperties: false,
     },
   },
   {
     name: "search_eu_ai_act",
-    description: "Full-text search across the EU AI Act corpus (Articles, Recitals, Annexes). Returns matching provisions.",
+    description:
+      "Full-text keyword search across the entire EU AI Act corpus — all Articles (1–113), Recitals (1–180) and " +
+      "Annexes (I–XIII) — returning the provisions that match your terms, each grounded verbatim in the law. USE THIS " +
+      "when you want to find where a topic, term or obligation is addressed but do not know the Article number " +
+      "(e.g. 'where does the law cover human oversight?', 'find biometric categorisation', 'rules for GPAI'). To fetch " +
+      "one known Article use lookup_article; to assess a specific system's risk tier use classify_ai_system.",
+    annotations: { title: "Search the EU AI Act (Articles, Recitals, Annexes)", readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search terms, e.g. 'biometric', 'human oversight', 'GPAI'." },
-        language: { type: "string", description: "ISO 639-1 code. Default en.", default: "en" },
+        query: {
+          type: "string",
+          minLength: 2,
+          description: "Keyword(s) or short phrase to search for across the EU AI Act. Use legal/topic terms rather than full questions for best matches.",
+          examples: [
+            "human oversight",
+            "biometric categorisation",
+            "general-purpose AI systemic risk",
+            "conformity assessment",
+            "fundamental rights impact assessment",
+          ],
+        },
+        language: langSchema,
       },
       required: ["query"],
+      additionalProperties: false,
     },
   },
   {
     name: "get_compliance_deadlines",
-    description: "Return the canonical EU AI Act application dates (post Digital-Omnibus) and the fine tiers. Use when asked when the EU AI Act applies, when a deadline is, or how big the fines are.",
-    inputSchema: { type: "object", properties: {} },
+    description:
+      "Return the canonical EU AI Act application timeline (the staggered dates each obligation starts to apply, " +
+      "reflecting the Digital Omnibus adjustment) together with the penalty/fine tiers under Article 99. Takes no " +
+      "arguments. USE THIS when the user asks when the EU AI Act (or a specific obligation) applies, what the key " +
+      "compliance deadlines are, or how large the fines can be.",
+    annotations: { title: "EU AI Act deadlines & fine tiers", readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
 ];
 
@@ -96,7 +159,7 @@ async function call(path, opts = {}) {
   } finally { clearTimeout(t); }
 }
 
-const server = new Server({ name: "sovereign-ai-act", version: "1.1.1" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "sovereign-ai-act", version: VERSION }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -123,4 +186,4 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error("Sovereign AI Act MCP server v1.1.1 running (stdio) · " + BASE);
+console.error(`Sovereign AI Act MCP server v${VERSION} running (stdio) · ${BASE}`);
