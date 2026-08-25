@@ -1,8 +1,8 @@
 <div align="center">
 
-# ◆ Sovereign AI Act — MCP server
+# ◆ RegulatoryAI MCP
 
-**Give your AI agent a *trustworthy* EU AI Act expert.**
+**RegulatoryAI MCP gives AI agents source-linked tools for understanding and searching the EU AI Act through Leo.**
 
 [![npm version](https://img.shields.io/npm/v/sovereign-ai-act-mcp?color=4DD6E0&label=npm)](https://www.npmjs.com/package/sovereign-ai-act-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/sovereign-ai-act-mcp?color=4DD6E0)](https://www.npmjs.com/package/sovereign-ai-act-mcp)
@@ -69,17 +69,24 @@ Also: `GET /api/article/{1-113}` · `GET /api/search?q=...`
 
 ## 💎 Why trust it
 
-- **Verbatim law.** All 113 Articles, 180 Recitals and 13 Annexes loaded word-for-word from the EU Publications Office (CELEX 32024R1689).
+- **Verbatim law.** Articles, Recitals and Annexes loaded word-for-word from the EU Publications Office.
+  The served corpus is currently the **original 2024 Official Journal text** (CELEX 32024R1689); the
+  consolidated text as of 27 July 2026 is being imported. Every response states its law version.
 - **Deterministic.** A rule engine, not a guess — every verdict cites the Article that binds you.
-- **EU-sovereign.** Operated by Dominion Intelligence AB, hosted in the EU.
+- **European.** RegulatoryAI is operated by Dominion Intelligence AB in Sweden.
 - **24 languages.** Ask in your own language.
 
 ## ⚙️ Config
 
-- `SOVEREIGN_API_BASE` — override the API base URL (default `https://www.regulatoryai.eu`).
+- `REGULATORYAI_API_BASE` — override the API base URL (default `https://www.regulatoryai.eu`).
+- `SOVEREIGN_API_BASE` — **deprecated** fallback, still honoured so existing setups keep working.
 - No API key required.
 
 ---
 
 Indicative classification grounded in the official text — **not legal advice**.
-Powered by [**Sovereign AI Act**](https://www.regulatoryai.eu/for-ai/) · © Dominion Intelligence AB
+[**RegulatoryAI**](https://www.regulatoryai.eu/for-ai/) · © Dominion Intelligence AB
+
+> **On the package name.** The npm package is published as `sovereign-ai-act-mcp`. That name is
+> retained for backward compatibility. **RegulatoryAI** is the canonical brand — RegulatoryAI was
+> previously presented under the working name "Sovereign AI Act".

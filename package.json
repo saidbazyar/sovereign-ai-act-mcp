@@ -1,7 +1,7 @@
 {
   "name": "sovereign-ai-act-mcp",
   "version": "1.3.0",
-  "description": "MCP server exposing Leo — the deterministic EU AI Act (Regulation (EU) 2024/1689) classifier — as tools for AI agents. Every answer cites the law verbatim.",
+  "description": "RegulatoryAI MCP — source-linked EU AI Act tools for AI agents, through Leo. Classify an AI system, look up Articles verbatim and search the law. Package name retained for backward compatibility; RegulatoryAI is the canonical brand.",
   "type": "module",
   "bin": {
     "sovereign-ai-act-mcp": "index.js"
