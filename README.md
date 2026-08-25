@@ -70,8 +70,11 @@ Also: `GET /api/article/{1-113}` · `GET /api/search?q=...`
 ## 💎 Why trust it
 
 - **Verbatim law.** Articles, Recitals and Annexes loaded word-for-word from the EU Publications Office.
-  The served corpus is currently the **original 2024 Official Journal text** (CELEX 32024R1689); the
-  consolidated text as of 27 July 2026 is being imported. Every response states its law version.
+  The served corpus is currently the **original 2024 Official Journal text** (CELEX 32024R1689).
+  Import of the consolidated text as of 27 July 2026 is not complete, so lettered provisions
+  introduced by amendment (such as Article 4a) are **not yet retrievable** even though the tool
+  schema accepts them. `get_compliance_deadlines` states its law version; whether the classify,
+  lookup and search responses do is not yet verified by an integration run against the live API.
 - **Deterministic.** A rule engine, not a guess — every verdict cites the Article that binds you.
 - **European.** RegulatoryAI is operated by Dominion Intelligence AB in Sweden.
 - **24 languages.** Ask in your own language.

@@ -37,6 +37,6 @@
   "author": "Dominion Intelligence AB",
   "mcpName": "eu.regulatoryai/sovereign-ai-act-mcp",
   "scripts": {
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs && node test/provenance.mjs"
   }
 }

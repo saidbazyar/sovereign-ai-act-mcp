@@ -51,18 +51,37 @@ const DEADLINES = {
   amending_acts: ["Regulation (EU) 2026/1744"],
   legal_status_note: "The consolidated text is a documentation tool. The authentic legal texts are the acts published in the Official Journal.",
   milestones: [
-    { date: "2025-02-02", applies: "Prohibited practices (Article 5) & AI literacy (Article 4)", status: "in force" },
-    { date: "2025-08-02", applies: "General-purpose AI (GPAI) models & governance (Articles 51–55)", status: "in force" },
-    { date: "2026-08-02", applies: "Main application date for provisions not subject to a specific later date, including most Article 50 transparency duties; national regulatory sandboxes (Article 57)", status: "upcoming" },
-    { date: "2026-12-02", applies: "Additional Article 5 prohibitions introduced by Regulation (EU) 2026/1744 and identified in Article 113(a). Also the Article 111(4) transition deadline: for systems covered by Article 50(2) placed on the market before 2 August 2026, providers have until this date to comply with the machine-readable marking requirement.", status: "upcoming" },
-    { date: "2027-12-02", applies: "High-risk obligations — standalone Annex III systems (Article 6(2))", status: "upcoming" },
-    { date: "2028-08-02", applies: "High-risk obligations — regulated products, Annex I (Article 6(1))", status: "upcoming" },
+    { date: "2024-08-01", applies: "The original Regulation entered into force (Article 113)." },
+    { date: "2025-02-02", applies: "Article 4 and most of Chapters I and II began to apply, including the original Article 5 prohibitions." },
+    { date: "2025-08-02", applies: "The provisions specified in Article 113(b), including the GPAI framework, began to apply, subject to the Regulation's transition rules." },
+    { date: "2026-07-27", applies: "Regulation (EU) 2026/1744 entered into force and the consolidated amended text became current." },
+    { date: "2026-08-02", applies: "The Regulation's main application date for provisions not subject to a specific later date, including most Article 50 transparency duties, and national regulatory sandboxes (Article 57)." },
+    { date: "2026-12-02", applies: "The additional Article 5 provisions specified in Article 113(a) apply: Article 5(1)(ba), Article 5(1)(bb), Article 5(1a) and Article 5(1b). Also the Article 111(4) transition deadline for systems covered by Article 50(2) placed on the market before 2 August 2026." },
+    { date: "2027-12-02", applies: "High-risk obligations for Article 6(2) / Annex III systems apply." },
+    { date: "2028-08-02", applies: "High-risk obligations for Article 6(1) / Annex I product-route systems apply." },
   ],
   fines: { prohibited: "up to €35M or 7% of global annual turnover", high_risk_breach: "up to €15M or 3%", wrong_info: "up to €7.5M or 1%", sme_note: "for SMEs the fine is the lower of the fixed amount or the percentage" },
   article_50_note: "Most Article 50 transparency duties apply from 2 August 2026. For systems covered by Article 50(2) that were placed on the market before 2 August 2026, Article 111(4) gives providers until 2 December 2026 to comply with the machine-readable marking requirement.",
   article_5_note: "Most original Article 5 prohibitions applied from 2 February 2025. The additional prohibitions introduced by Regulation (EU) 2026/1744 and identified in Article 113(a) apply from 2 December 2026.",
   disclaimer: "Indicative — confirm against the official text. Not legal advice.",
 };
+
+/**
+ * Milestone status is derived at response time. A stored "upcoming" silently becomes a
+ * false statement the day the date passes — 2 August 2026 was still labelled "upcoming"
+ * three weeks after it took effect.
+ */
+function withComputedStatus(deadlines, now = new Date()) {
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return {
+    ...deadlines,
+    as_of: new Date(today).toISOString().slice(0, 10),
+    milestones: deadlines.milestones.map((m) => ({
+      ...m,
+      status: Date.parse(m.date + "T00:00:00Z") <= today ? "in force" : "upcoming",
+    })),
+  };
+}
 
 const TOOLS = [
   {
@@ -219,7 +238,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     if (!a.query || String(a.query).trim().length < 2) result = { ok: false, error: "Provide a 'query' (min 2 chars)." };
     else result = await call(`/api/search?q=${encodeURIComponent(a.query)}&language=${lang}`);
   } else if (name === "get_compliance_deadlines") {
-    result = { ok: true, ...DEADLINES, attribution: "RegulatoryAI — https://www.regulatoryai.eu" };
+    result = { ok: true, ...withComputedStatus(DEADLINES), attribution: "RegulatoryAI — https://www.regulatoryai.eu" };
   } else {
     result = { ok: false, error: `Unknown tool: ${name}` };
   }
