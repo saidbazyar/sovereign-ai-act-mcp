@@ -11,7 +11,7 @@
 
 </div>
 
-This [Model Context Protocol](https://modelcontextprotocol.io) server exposes **Leo** — the deterministic classifier for **Regulation (EU) 2024/1689 (the EU AI Act)** — as callable tools. Every answer is grounded **verbatim** in the official law. **Leo never guesses.**
+This [Model Context Protocol](https://modelcontextprotocol.io) server exposes **Leo** — the deterministic classifier for **Regulation (EU) 2024/1689 (the EU AI Act), as amended by Regulation (EU) 2026/1744 (the Digital Omnibus on AI, in force 27 July 2026)** — as callable tools. Every answer is grounded **verbatim** in the official law. **Leo never guesses.**
 
 When a user asks an AI *"is my AI system high-risk under the EU AI Act?"*, the honest answer must cite the actual law — not a hallucination. This server lets your agent do exactly that.
 
@@ -20,9 +20,9 @@ When a user asks an AI *"is my AI system high-risk under the EU AI Act?"*, the h
 | Tool | What it does |
 |------|--------------|
 | `classify_ai_system` | Plain-language AI description → risk tier (prohibited / high-risk / limited / minimal) + the exact Annex III category and binding Articles. |
-| `lookup_article` | Verbatim text of any Article (1–113). |
+| `lookup_article` | Verbatim text of any Article (1–113 of the 2024 text; amended articles are flagged on the site). |
 | `search_eu_ai_act` | Full-text search across Articles, Recitals and Annexes. |
-| `get_compliance_deadlines` | The canonical post-Digital-Omnibus application dates and fine tiers. |
+| `get_compliance_deadlines` | The application dates in force under Regulation (EU) 2026/1744 (statuses computed at call time) and the Article 99 fine tiers. |
 
 ## 🚀 Install (Claude Desktop)
 

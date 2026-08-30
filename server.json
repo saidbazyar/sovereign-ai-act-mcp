@@ -7,12 +7,12 @@
     "url": "https://github.com/saidbazyar/sovereign-ai-act-mcp",
     "source": "github"
   },
-  "version": "1.3.0",
+  "version": "1.4.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "sovereign-ai-act-mcp",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "transport": {
         "type": "stdio"
       }

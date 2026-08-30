@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 /**
  * Sovereign AI Act — MCP server
- * Exposes Leo, the deterministic EU AI Act (Regulation (EU) 2024/1689) classifier,
+ * Exposes Leo, the deterministic EU AI Act classifier — Regulation (EU) 2024/1689 as amended by
+ * Regulation (EU) 2026/1744 (the Digital Omnibus on AI, in force 27 July 2026) —
  * as tools any MCP-capable AI agent (Claude Desktop, IDEs, custom agents) can call.
  * Every answer is grounded verbatim in the official law — Leo never guesses.
  *
  * Tools:
  *   - classify_ai_system        : map a plain-language AI description to its EU AI Act risk tier + binding Articles
- *   - lookup_article            : fetch the verbatim text of any Article (1–113)
+ *   - lookup_article            : fetch the verbatim text of any Article (1–113 of the 2024 text)
  *   - search_eu_ai_act          : full-text search across Articles, Recitals and Annexes
- *   - get_compliance_deadlines  : the canonical post-Digital-Omnibus application dates + fine tiers
+ *   - get_compliance_deadlines  : the application dates in force under Regulation (EU) 2026/1744 + fine tiers
  *
  * Transport: stdio. Backed by the public API at https://www.regulatoryai.eu/api/*
  */
@@ -17,7 +18,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 const BASE = process.env.SOVEREIGN_API_BASE || "https://www.regulatoryai.eu";
 const UA = `sovereign-ai-act-mcp/${VERSION} (+https://www.regulatoryai.eu/for-ai/)`;
 
@@ -30,26 +31,35 @@ const langSchema = {
   description: "Language for the answer, as an ISO 639-1 code — one of the EU AI Act's 24 official languages (e.g. 'en' English, 'de' German, 'fr' French, 'es' Spanish, 'sv' Swedish). Defaults to 'en'.",
 };
 
-// Canonical post-Digital-Omnibus (7 May 2026) EU AI Act application dates.
-const DEADLINES = {
-  source: "Regulation (EU) 2024/1689, as adjusted by the Digital Omnibus (political agreement 7 May 2026)",
-  milestones: [
-    { date: "2025-02-02", applies: "Prohibited practices (Article 5) & AI literacy (Article 4)", status: "in force" },
-    { date: "2025-08-02", applies: "General-purpose AI (GPAI) models & governance (Articles 51–55)", status: "in force" },
-    { date: "2026-08-02", applies: "Article 50(1) transparency — disclose AI interaction; national regulatory sandboxes (Article 57)", status: "upcoming" },
-    { date: "2026-12-02", applies: "Article 50(2) — machine-readable marking of synthetic content / deepfakes", status: "upcoming" },
-    { date: "2027-12-02", applies: "High-risk obligations — standalone Annex III systems (Article 6(2))", status: "upcoming" },
-    { date: "2028-08-02", applies: "High-risk obligations — regulated products, Annex I (Article 6(1))", status: "upcoming" },
-  ],
-  fines: { prohibited: "up to €35M or 7% of global annual turnover", high_risk_breach: "up to €15M or 3%", wrong_info: "up to €7.5M or 1%", sme_note: "for SMEs the fine is the lower of the fixed amount or the percentage" },
-  disclaimer: "Indicative — confirm against the official text. Not legal advice.",
+// Application dates in force. Source: Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744
+// (the Digital Omnibus on AI) — signed 8 July 2026, Official Journal 24 July 2026, in force 27 July 2026.
+// Statuses are computed at call time so this server never reports a passed date as "upcoming".
+const MILESTONES = [
+  { date: "2025-02-02", applies: "Prohibited practices (Article 5) and the AI-literacy duty (Article 4 — replaced by Reg 2026/1744: take measures to support AI literacy; no specific level need be guaranteed)" },
+  { date: "2025-08-02", applies: "General-purpose AI (GPAI) model obligations and governance (Articles 51–55)" },
+  { date: "2026-07-27", applies: "Regulation (EU) 2026/1744 in force; Articles 102–110 apply (Article 113(d))" },
+  { date: "2026-08-02", applies: "Article 50 transparency in FULL — disclose AI interaction, deepfake disclosure, emotion-recognition notices AND Article 50(2) machine-readable marking of synthetic content" },
+  { date: "2026-12-02", applies: "New Article 5 prohibitions — AI generating non-consensual intimate imagery or CSAM (Art 5(1)(ba),(bb), 5(1a),(1b)); and the Article 111(4) deadline for systems placed on the market BEFORE 2 Aug 2026 to comply with Article 50(2)" },
+  { date: "2027-08-02", applies: "National AI regulatory sandboxes operational (Article 57(1) as replaced — deferred from 2 Aug 2026)" },
+  { date: "2027-12-02", applies: "High-risk obligations — standalone Annex III systems (Article 6(2)); deferred from 2 Aug 2026" },
+  { date: "2028-08-02", applies: "High-risk obligations — regulated products, Annex I (Article 6(1)); deferred from 2 Aug 2027. Note Article 6(1a)–(1c): AI used solely for non-safety aspects is not a safety component" },
+];
+const deadlines = () => {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    source: "Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744 (Digital Omnibus on AI; OJ L 24 July 2026; in force 27 July 2026) — CELEX 32024R1689 + 32026R1744",
+    as_of: today,
+    milestones: MILESTONES.map((m) => ({ ...m, status: m.date <= today ? "in force" : "upcoming" })),
+    fines: { prohibited: "up to €35M or 7% of global annual turnover", high_risk_breach: "up to €15M or 3%", wrong_info: "up to €7.5M or 1%", sme_note: "for SMEs the fine is the lower of the fixed amount or the percentage" },
+    disclaimer: "Indicative — confirm against the official text (EUR-Lex 32024R1689 and 32026R1744). Not legal advice.",
+  };
 };
 
 const TOOLS = [
   {
     name: "classify_ai_system",
     description:
-      "Classify an AI system under the EU AI Act (Regulation (EU) 2024/1689). Give a plain-language description of " +
+      "Classify an AI system under the EU AI Act (Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744). Give a plain-language description of " +
       "what the system does and it returns the risk tier (prohibited / high_risk / limited / minimal), the exact " +
       "Annex III category where applicable, and the binding Articles — every reference grounded verbatim in the law. " +
       "USE THIS when the user asks whether an AI system is high-risk or prohibited, what obligations apply to it, or " +
@@ -139,7 +149,7 @@ const TOOLS = [
     name: "get_compliance_deadlines",
     description:
       "Return the canonical EU AI Act application timeline (the staggered dates each obligation starts to apply, " +
-      "reflecting the Digital Omnibus adjustment) together with the penalty/fine tiers under Article 99. Takes no " +
+      "as amended by Regulation (EU) 2026/1744, the Digital Omnibus on AI, in force 27 July 2026) together with the penalty/fine tiers under Article 99. Takes no " +
       "arguments. USE THIS when the user asks when the EU AI Act (or a specific obligation) applies, what the key " +
       "compliance deadlines are, or how large the fines can be.",
     annotations: { title: "EU AI Act deadlines & fine tiers", readOnlyHint: true, idempotentHint: true, openWorldHint: false },
@@ -177,7 +187,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     if (!a.query || String(a.query).trim().length < 2) result = { ok: false, error: "Provide a 'query' (min 2 chars)." };
     else result = await call(`/api/search?q=${encodeURIComponent(a.query)}&language=${lang}`);
   } else if (name === "get_compliance_deadlines") {
-    result = { ok: true, ...DEADLINES, attribution: "Sovereign AI Act — https://www.regulatoryai.eu" };
+    result = { ok: true, ...deadlines(), attribution: "Sovereign AI Act — https://www.regulatoryai.eu" };
   } else {
     result = { ok: false, error: `Unknown tool: ${name}` };
   }
