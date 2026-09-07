@@ -1,0 +1,117 @@
+name: Stage npm release (OIDC)
+
+run-name: Stage sovereign-ai-act-mcp ${{ inputs.version }} for review
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact version already locked in all package metadata
+        required: true
+        type: string
+      confirm_stage:
+        description: Stage this version for later npm review and 2FA approval
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-stage-publish
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Verify release candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the requested commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Use the release toolchain
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.15.0'
+          package-manager-cache: false
+
+      - name: Pin npm CLI with staged-publishing support
+        run: |
+          npm install --global npm@12.0.2 --ignore-scripts --no-audit --no-fund
+          npm --version
+
+      - name: Verify release identity and authorization boundary
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+          CONFIRM_STAGE: ${{ inputs.confirm_stage }}
+        run: npm run release:verify
+
+      - name: Verify the version is not already published
+        run: node scripts/verify-unpublished-version.mjs
+
+      - name: Install from the lockfile
+        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
+      - name: Block high or critical dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Verify syntax and behavior
+        run: |
+          node --check index.js
+          npm test
+
+      - name: Inspect the exact npm payload
+        run: npm pack --dry-run --json
+
+  stage:
+    name: Stage package for human approval
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the verified commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Use the release toolchain
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.15.0'
+          package-manager-cache: false
+
+      - name: Pin npm CLI with staged-publishing support
+        run: |
+          npm install --global npm@12.0.2 --ignore-scripts --no-audit --no-fund
+          npm --version
+
+      - name: Re-verify release identity
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+          CONFIRM_STAGE: ${{ inputs.confirm_stage }}
+        run: npm run release:verify
+
+      - name: Install and test from the lockfile
+        run: |
+          npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high
+          node --check index.js
+          npm test
+          npm pack --dry-run --json
+
+      - name: Re-verify the version is still unpublished
+        run: node scripts/verify-unpublished-version.mjs
+
+      - name: Stage on npm with short-lived OIDC credentials
+        run: npm stage publish

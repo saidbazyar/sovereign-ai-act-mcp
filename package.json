@@ -36,7 +36,17 @@
   "license": "MIT",
   "author": "Dominion Intelligence AB",
   "mcpName": "eu.regulatoryai/sovereign-ai-act-mcp",
+  "files": [
+    "index.js",
+    "server.json"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs && node test/publish-workflow.mjs && node test/unpublished-version.mjs",
+    "test:publish-workflow": "node test/publish-workflow.mjs",
+    "release:verify": "node scripts/verify-release.mjs"
   }
 }
