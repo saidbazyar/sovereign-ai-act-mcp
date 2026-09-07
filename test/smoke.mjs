@@ -5,6 +5,7 @@
  * Exits 0 on success, 1 on failure. Used by CI and `npm test`.
  */
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -12,6 +13,24 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EXPECTED = ["classify_ai_system", "lookup_article", "search_eu_ai_act", "get_compliance_deadlines"];
 
 function fail(msg) { console.error("✗ " + msg); process.exit(1); }
+
+const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const packageLock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
+const serverJson = JSON.parse(readFileSync(join(root, "server.json"), "utf8"));
+const indexSource = readFileSync(join(root, "index.js"), "utf8");
+const indexVersion = indexSource.match(/const VERSION = "([^"]+)"/)?.[1];
+const versions = {
+  package: packageJson.version,
+  lockRoot: packageLock.version,
+  lockPackage: packageLock.packages?.[""]?.version,
+  server: serverJson.version,
+  serverPackage: serverJson.packages?.[0]?.version,
+  runtime: indexVersion,
+};
+if (new Set(Object.values(versions)).size !== 1) {
+  fail(`version metadata drift: ${JSON.stringify(versions)}`);
+}
+console.log(`✓ machine metadata versions aligned: ${packageJson.version}`);
 
 const child = spawn("node", ["index.js"], { cwd: root, stdio: ["pipe", "pipe", "inherit"] });
 
