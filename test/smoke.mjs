@@ -19,21 +19,30 @@ const packageLock = JSON.parse(readFileSync(join(root, "package-lock.json"), "ut
 const serverJson = JSON.parse(readFileSync(join(root, "server.json"), "utf8"));
 const indexSource = readFileSync(join(root, "index.js"), "utf8");
 const indexVersion = indexSource.match(/const VERSION = "([^"]+)"/)?.[1];
-const versions = {
+const releaseVersions = {
   package: packageJson.version,
   lockRoot: packageLock.version,
   lockPackage: packageLock.packages?.[""]?.version,
   server: serverJson.version,
-  serverPackage: serverJson.packages?.[0]?.version,
   runtime: indexVersion,
 };
-if (new Set(Object.values(versions)).size !== 1) {
-  fail(`version metadata drift: ${JSON.stringify(versions)}`);
+if (new Set(Object.values(releaseVersions)).size !== 1) {
+  fail(`release version metadata drift: ${JSON.stringify(releaseVersions)}`);
+}
+const publishedPackageVersion = serverJson.packages?.[0]?.version;
+const semver = (value) => /^\d+\.\d+\.\d+$/.test(value || "") ? value.split(".").map(Number) : null;
+const published = semver(publishedPackageVersion);
+const release = semver(packageJson.version);
+if (!published || !release) {
+  fail(`invalid package version reference: ${publishedPackageVersion}`);
+}
+if (published.some((part, index) => part > release[index] && published.slice(0, index).every((prior, priorIndex) => prior === release[priorIndex]))) {
+  fail(`server metadata points at a package version newer than the release: ${publishedPackageVersion}`);
 }
 if (!serverJson.remotes?.some((remote) => remote.type === "streamable-http" && remote.url === "https://www.regulatoryai.eu/mcp")) {
   fail("server metadata does not declare the canonical remote endpoint");
 }
-console.log(`✓ machine metadata versions aligned: ${packageJson.version}`);
+console.log(`✓ release metadata aligned at ${packageJson.version}; npm package reference ${publishedPackageVersion}`);
 
 const child = spawn("node", ["index.js"], { cwd: root, stdio: ["pipe", "pipe", "inherit"] });
 

@@ -19,7 +19,7 @@
     {
       "registryType": "npm",
       "identifier": "sovereign-ai-act-mcp",
-      "version": "1.4.1",
+      "version": "1.4.0",
       "transport": {
         "type": "stdio"
       }
