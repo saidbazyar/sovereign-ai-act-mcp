@@ -1,18 +1,25 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "eu.regulatoryai/sovereign-ai-act-mcp",
+  "title": "Sovereign AI Act MCP",
   "description": "Classify any AI system under the EU AI Act: risk tier + binding Articles, verbatim from the law.",
-  "status": "active",
+  "websiteUrl": "https://www.regulatoryai.eu/mcp/",
   "repository": {
     "url": "https://github.com/saidbazyar/sovereign-ai-act-mcp",
     "source": "github"
   },
-  "version": "1.4.0",
+  "version": "1.4.1",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://www.regulatoryai.eu/mcp"
+    }
+  ],
   "packages": [
     {
       "registryType": "npm",
       "identifier": "sovereign-ai-act-mcp",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "transport": {
         "type": "stdio"
       }

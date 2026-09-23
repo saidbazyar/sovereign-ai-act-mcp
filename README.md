@@ -20,9 +20,10 @@ When a user asks an AI *"is my AI system high-risk under the EU AI Act?"*, the h
 | Tool | What it does |
 |------|--------------|
 | `classify_ai_system` | Plain-language AI description → risk tier (prohibited / high-risk / limited / minimal) + the exact Annex III category and binding Articles. |
-| `lookup_article` | Verbatim text of any Article (1–113 of the 2024 text; amended articles are flagged on the site). |
-| `search_eu_ai_act` | Full-text search across Articles, Recitals and Annexes. |
+| `lookup_article` | Verbatim direct lookup for original Articles 1–113 plus inserted Articles 4a, 60a and 75a–75d. |
+| `search_eu_ai_act` | Full-text search across the original 2024 Articles, Recitals and Annexes. |
 | `get_compliance_deadlines` | The application dates in force under Regulation (EU) 2026/1744 (statuses computed at call time) and the Article 99 fine tiers. |
+| `review_feature` | Pre-release review of an AI feature: signal, binding Articles, obligations, red flags and next steps. |
 
 ## 🚀 Install (Claude Desktop)
 
@@ -42,6 +43,14 @@ Add to your `claude_desktop_config.json`:
 Restart Claude, then ask: *"Is an AI that screens job applicants high-risk under the EU AI Act?"* — Claude calls Leo and answers with the exact Articles.
 
 Works the same in **Cursor**, **VS Code**, **Windsurf**, **Cline**, and any MCP-capable client.
+
+## 🌐 Remote server (zero install)
+
+Clients that support Streamable HTTP can use the same five tools directly:
+
+```text
+https://www.regulatoryai.eu/mcp
+```
 
 ## ⚡ Try the API directly (no install, no key)
 
@@ -65,11 +74,11 @@ curl -X POST https://www.regulatoryai.eu/api/classify \
 }
 ```
 
-Also: `GET /api/article/{1-113}` · `GET /api/search?q=...`
+Also: `GET /api/article/{1-113|4a|60a|75a|75b|75c|75d}` · `GET /api/annex/XIV/1` · `GET /api/search?q=...` (original 2024 corpus plus the listed 2026 insertions)
 
 ## 💎 Why trust it
 
-- **Verbatim law.** All 113 Articles, 180 Recitals and 13 Annexes loaded word-for-word from the EU Publications Office (CELEX 32024R1689).
+- **Verbatim law.** The original 2024 corpus contains 113 Articles, 180 Recitals and 13 Annexes. Inserted Articles 4a, 60a, 75a–75d and Annex XIV from Regulation (EU) 2026/1744 are published separately in all 24 languages.
 - **Deterministic.** A rule engine, not a guess — every verdict cites the Article that binds you.
 - **EU-sovereign.** Operated by Dominion Intelligence AB, hosted in the EU.
 - **24 languages.** Ask in your own language.

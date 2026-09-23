@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const EXPECTED = ["classify_ai_system", "lookup_article", "search_eu_ai_act", "get_compliance_deadlines"];
+const EXPECTED = ["classify_ai_system", "lookup_article", "search_eu_ai_act", "get_compliance_deadlines", "review_feature"];
 
 function fail(msg) { console.error("✗ " + msg); process.exit(1); }
 
@@ -29,6 +29,9 @@ const versions = {
 };
 if (new Set(Object.values(versions)).size !== 1) {
   fail(`version metadata drift: ${JSON.stringify(versions)}`);
+}
+if (!serverJson.remotes?.some((remote) => remote.type === "streamable-http" && remote.url === "https://www.regulatoryai.eu/mcp")) {
+  fail("server metadata does not declare the canonical remote endpoint");
 }
 console.log(`✓ machine metadata versions aligned: ${packageJson.version}`);
 
@@ -54,6 +57,11 @@ child.stdout.on("data", (chunk) => {
       for (const t of tools) {
         if (!t.description || t.description.length < 20) fail(`${t.name}: description too short`);
         if (!t.inputSchema || t.inputSchema.type !== "object") fail(`${t.name}: missing inputSchema`);
+      }
+      const lookup = tools.find((tool) => tool.name === "lookup_article");
+      const inserted = lookup?.inputSchema?.properties?.number?.oneOf?.find((schema) => Array.isArray(schema.enum))?.enum || [];
+      for (const id of ["4a", "60a", "75a", "75b", "75c", "75d"]) {
+        if (!inserted.includes(id)) fail(`lookup_article schema omits inserted Article ${id}`);
       }
       console.log(`✓ ${tools.length} tools, handshake OK: ${names.join(", ")}`);
       child.kill();

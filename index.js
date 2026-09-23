@@ -8,9 +8,10 @@
  *
  * Tools:
  *   - classify_ai_system        : map a plain-language AI description to its EU AI Act risk tier + binding Articles
- *   - lookup_article            : fetch the verbatim text of any Article (1–113 of the 2024 text)
+ *   - lookup_article            : fetch Articles 1–113 of the 2024 text plus inserted 4a, 60a and 75a–75d
  *   - search_eu_ai_act          : full-text search across Articles, Recitals and Annexes
  *   - get_compliance_deadlines  : the application dates in force under Regulation (EU) 2026/1744 + fine tiers
+ *   - review_feature            : review a planned AI feature before it ships
  *
  * Transport: stdio. Backed by the public API at https://www.regulatoryai.eu/api/*
  */
@@ -18,7 +19,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
-const VERSION = "1.4.0";
+const VERSION = "1.4.1";
 const BASE = process.env.SOVEREIGN_API_BASE || "https://www.regulatoryai.eu";
 const UA = `sovereign-ai-act-mcp/${VERSION} (+https://www.regulatoryai.eu/for-ai/)`;
 
@@ -29,6 +30,14 @@ const langSchema = {
   enum: LANGS,
   default: "en",
   description: "Language for the answer, as an ISO 639-1 code — one of the EU AI Act's 24 official languages (e.g. 'en' English, 'de' German, 'fr' French, 'es' Spanish, 'sv' Swedish). Defaults to 'en'.",
+};
+const articleIdSchema = {
+  oneOf: [
+    { type: "integer", minimum: 1, maximum: 113 },
+    { type: "string", enum: ["4a", "60a", "75a", "75b", "75c", "75d"] },
+  ],
+  description: "Original Article number 1–113, or an inserted amended provision: 4a, 60a or 75a–75d.",
+  examples: [5, 50, 99, "4a", "60a", "75a", "75b", "75c", "75d"],
 };
 
 // Application dates in force. Source: Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744
@@ -94,21 +103,16 @@ const TOOLS = [
   {
     name: "lookup_article",
     description:
-      "Return the verbatim text of one specific EU AI Act Article (1–113), exactly as published in the Official " +
-      "Journal of the EU. USE THIS when the user names or asks for a known Article number (e.g. 'show me Article 6', " +
+      "Return the verbatim text of one specific EU AI Act Article: original Articles 1–113 or inserted Articles " +
+      "4a, 60a and 75a–75d from Regulation (EU) 2026/1744. The response is grounded in the Official Journal text. " +
+      "USE THIS when the user names or asks for a known Article number (e.g. 'show me Article 6', " +
       "'what does Article 5 say'). For keyword/topic search across the whole law use search_eu_ai_act; to classify a " +
       "system use classify_ai_system.",
     annotations: { title: "Look up an EU AI Act Article (verbatim)", readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
-        number: {
-          type: "integer",
-          minimum: 1,
-          maximum: 113,
-          description: "The Article number to retrieve, an integer from 1 to 113. Examples: 5 (prohibited practices), 6 (high-risk classification), 9 (risk management), 14 (human oversight), 50 (transparency), 99 (penalties).",
-          examples: [5, 6, 14, 50, 99],
-        },
+        number: articleIdSchema,
         language: langSchema,
       },
       required: ["number"],
@@ -155,6 +159,27 @@ const TOOLS = [
     annotations: { title: "EU AI Act deadlines & fine tiers", readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
+  {
+    name: "review_feature",
+    description:
+      "Review an AI feature, specification or behaviour before it ships. Returns an EU AI Act ship/caution/stop " +
+      "signal, binding Articles, applicable obligations, red flags and concrete next steps. USE THIS proactively " +
+      "while designing or coding an AI feature.",
+    annotations: { title: "Review an AI feature before release", readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    inputSchema: {
+      type: "object",
+      properties: {
+        input: {
+          type: "string",
+          minLength: 6,
+          description: "The AI feature, specification or behaviour you are about to build or ship.",
+        },
+        language: langSchema,
+      },
+      required: ["input"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 async function call(path, opts = {}) {
@@ -180,14 +205,19 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     if (!a.description || String(a.description).trim().length < 4) result = { ok: false, error: "Provide a 'description' of the AI system (min 4 chars)." };
     else result = await call("/api/classify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ description: a.description, language: lang, full: !!a.full }) });
   } else if (name === "lookup_article") {
-    const n = parseInt(a.number, 10);
-    if (!Number.isInteger(n) || n < 1 || n > 113) result = { ok: false, error: "Article number must be 1–113." };
-    else result = await call(`/api/article/${n}?language=${lang}`);
+    const id = String(a.number ?? "").toLowerCase();
+    const n = Number(id);
+    const valid = (/^\d+$/.test(id) && Number.isInteger(n) && n >= 1 && n <= 113) || ["4a", "60a", "75a", "75b", "75c", "75d"].includes(id);
+    if (!valid) result = { ok: false, error: "Article must be 1–113, 4a, 60a or 75a–75d." };
+    else result = await call(`/api/article/${encodeURIComponent(id)}?language=${lang}`);
   } else if (name === "search_eu_ai_act") {
     if (!a.query || String(a.query).trim().length < 2) result = { ok: false, error: "Provide a 'query' (min 2 chars)." };
     else result = await call(`/api/search?q=${encodeURIComponent(a.query)}&language=${lang}`);
   } else if (name === "get_compliance_deadlines") {
     result = { ok: true, ...deadlines(), attribution: "Sovereign AI Act — https://www.regulatoryai.eu" };
+  } else if (name === "review_feature") {
+    if (!a.input || String(a.input).trim().length < 6) result = { ok: false, error: "Provide 'input' (min 6 chars): the AI feature you are about to ship." };
+    else result = await call("/api/review", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: a.input, language: lang }) });
   } else {
     result = { ok: false, error: `Unknown tool: ${name}` };
   }
